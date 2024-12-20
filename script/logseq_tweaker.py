@@ -1,41 +1,45 @@
-'''
-Generated using ChatGPT using the prompt 
-"Write a python program to read each file in a specified folder into memory"
-'''
-import os
-from pathlib import Path
+import re
 
-def read_files_in_folder(folder_path):
+from folder_reader import read_files_in_folder, find_missing_files_by_names
+
+def extract_reference_words(text):
     """
-    Reads all files in the specified folder into memory.
-
-    :param folder_path: Path to the folder containing the files
-    :return: Dictionary with file names as keys and file contents as values
+    Extracts words wrapped with [[ and ]] or preceded by #.
+    
+    :param text: The input string
+    :return: A list of matched words
     """
-    file_contents = {}
+    # Regular expression to match words wrapped in [[ ]] or preceded by #
+    pattern = r'\[\[(.*?)\]\]|#(\w+)'
+    matches = re.findall(pattern, text)
+    
+    # Combine matches from both groups and filter out empty strings
+    results = [match[0] or match[1] for match in matches]
+    return results
 
-    # Ensure the folder path is valid
-    folder = Path(folder_path)
-    if not folder.is_dir():
-        raise ValueError(f"{folder_path} is not a valid directory.")
+def get_unique_items(input_array):
+    return list(set(input_array))
 
-    # Iterate over all files in the folder
-    for file in folder.iterdir():
-        if file.is_file():  # Ensure it's a file
-            try:
-                # Read the file's contents
-                with open(file, 'r', encoding='utf-8') as f:
-                    file_contents[file.name] = f.read()
-            except Exception as e:
-                print(f"Error reading {file.name}: {e}")
-
-    return file_contents
+def parse_journal(file_name, file_content):
+    # print(f"\n--- Content of {file_name} has been read")
+    references = []
+    for line in file_content.split('\n'):
+        topics = []
+        topics += extract_reference_words(line)
+        if topics:
+            references += topics
+    return get_unique_items(references)
 
 if __name__ == "__main__":
-    folder_path = input("Enter the path to the folder: ")
+    workspace_path = input("Enter the path to the Logseq folder: ")
+    references = []
     try:
-        files = read_files_in_folder(folder_path)
+        files = read_files_in_folder(workspace_path + '/journals')
         for file_name, content in files.items():
-            print(f"\n--- Content of {file_name} ---\n{content}\n")
+            references += parse_journal(file_name, content)
+        references = get_unique_items(references)
+        missing_references = find_missing_files_by_names(references, workspace_path + '/pages')
+        print(f"The following journal references are missing actual files: \n")
+        print(missing_references)
     except Exception as e:
         print(f"Error: {e}")
