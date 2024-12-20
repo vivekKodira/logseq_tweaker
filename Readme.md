@@ -12,11 +12,11 @@ A program that parses journal entries & finds tags that only exist in journals a
 * Run `python ./script/logseq_tweaker.py`
 * The code will prompt you for the location of your workspace
 * It will go through all the journals & get a list of unique `[[pages]]` or `#tags`
-* Then it searches the pages folder for any files with that name
+* Then it searches the pages folder for any files with that name & lists any references which don't exist
 
 ## Roadmap
 _Will work on this when/if I find time_
-* Tell the user about references which have sub-blocks (today it just lists all missing ones)
+* Tell the user about references which have sub-blocks (today it just lists all references which don't have actual files)
 * Add a user prompt to confirm & if they approve, create the missing page, and move any blocks from the journal to the page
 * Handle sub-folders and namespaces
 

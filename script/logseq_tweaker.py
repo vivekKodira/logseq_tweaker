@@ -20,6 +20,10 @@ def extract_reference_words(text):
 def get_unique_items(input_array):
     return list(set(input_array))
 
+def get_child_blocks(references, content):
+    
+    return []
+
 def parse_journal(file_name, file_content):
     # print(f"\n--- Content of {file_name} has been read")
     references = []
@@ -37,9 +41,15 @@ if __name__ == "__main__":
         files = read_files_in_folder(workspace_path + '/journals')
         for file_name, content in files.items():
             references += parse_journal(file_name, content)
+            if references:
+                child_blocks = get_child_blocks(references,content)
+
         references = get_unique_items(references)
         missing_references = find_missing_files_by_names(references, workspace_path + '/pages')
         print(f"The following journal references are missing actual files: \n")
         print(missing_references)
+
+        
+
     except Exception as e:
         print(f"Error: {e}")
