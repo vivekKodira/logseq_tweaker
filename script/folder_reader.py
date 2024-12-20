@@ -26,20 +26,3 @@ def read_files_in_folder(folder_path):
                 print(f"Error reading {file.name}: {e}")
 
     return file_contents
-
-def find_missing_files_by_names(filenames, folder):
-    # List to store the paths of found files
-    missing_files = []
-    
-    # Loop through each filename in the provided list
-    for filename in filenames:
-        # Generate the full path to the file
-        file_path = os.path.join(folder, filename + '.md')
-        # print(f"\n-- Finding files in {folder} for {file_path}")
-        
-        # Check if the file exists in the folder
-        if not os.path.isfile(file_path):
-            missing_files.append(filename)
-        
-    
-    return missing_files
