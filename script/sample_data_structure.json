@@ -1,0 +1,42 @@
+{
+    "Existing Topic": {
+        "journals": {
+            "2024_12_19.md": [],
+            "2024_12_18.md": []
+        },
+        "exists": "Y"
+    },
+    "Virtual Topic": {
+        "journals": {
+            "2024_12_19.md": [
+                "- 1st Content added to the virtual topic which should be moved to the topic itself",
+                "- 2nd Content added to the virtual topic which should be moved to the topic itself"
+            ],
+            "2024_12_18.md": [
+                "- 1st Content added to the virtual topic which should be moved to the topic itself",
+                "- 2nd Content added to the virtual topic which should be moved to the topic itself"
+            ]
+        },
+        "exists": "N"
+    },
+    "ExistingTopic2": {
+        "journals": {
+            "2024_12_19.md": [],
+            "2024_12_18.md": []
+        },
+        "exists": "Y"
+    },
+    "VirtualTopic2": {
+        "journals": {
+            "2024_12_19.md": [
+                "- 1st Content on virtual topic 2 which should be moved to the topic itself",
+                "- 2nd Content on virtual topic 2 which should be moved to the topic itself"
+            ],
+            "2024_12_18.md": [
+                "- 1st Content on virtual topic 2 which should be moved to the topic itself",
+                "- 2nd Content on virtual topic 2 which should be moved to the topic itself"
+            ]
+        },
+        "exists": "N"
+    }
+}

@@ -37,6 +37,7 @@ def find_missing_files_by_names(references, folder):
 
 def parse_journal(file_name, file_content, references):
     lines = file_content.split('\n');
+    base_name, extension = os.path.splitext(file_name)
     for i, line in enumerate(lines):
         topics = extract_reference_words(line)
         if topics:
@@ -44,8 +45,8 @@ def parse_journal(file_name, file_content, references):
                 if topic not in references:
                     references[topic] = {"journals":{}}
                 topic_references = references[topic]
-                if file_name not in topic_references["journals"]:
-                    topic_references["journals"][file_name] = []
+                if base_name not in topic_references["journals"]:
+                    topic_references["journals"][base_name] = []
                 
                 child_blocks = []
                 if not CHILD_BLOCK_STRICT_MODE:
@@ -62,10 +63,11 @@ def parse_journal(file_name, file_content, references):
                         shouldloop = False
                     j += 1
                 if child_blocks:
-                    topic_references["journals"][file_name] += child_blocks
+                    topic_references["journals"][base_name] += child_blocks
     return references
 
 def write_output(references, file_path):
+    pages_path = file_path + '/pages'
     missing_references = []
     existing_references = []
     reference_keys = list(references.keys())
@@ -73,15 +75,44 @@ def write_output(references, file_path):
         if references[key]["exists"] == "N":
             missing_references.append(key)
     existing_references = set(reference_keys) - set(missing_references)
-    with open(file_path+'/logseq_tweaker_output.md', 'w') as f:
+    with open(pages_path+'/logseq_tweaker_output.md', 'w') as f:
         f.write(f"This file is generated automatically each time the logseq_tweaker program is run.\n\n")
-        f.write(f"## Missing References\n")
+        f.write(f"## Missing References (These have been created as files and the contents added)\n")
         for missing_reference in missing_references:
             f.write(f"\t- [[{missing_reference}]]\n")
         
         f.write(f"## Child References in journals pointing to existing files\n")
         for existing_reference in existing_references:
             f.write(f"\t- [[{existing_reference}]]\n")
+    for missing_reference in missing_references:
+        with open(pages_path+'/'+missing_reference+'.md', 'w') as f:
+            for journal, child_blocks in references[missing_reference]["journals"].items():
+                f.write(f"- [[{journal}]]\n")
+                for child_block in child_blocks:
+                    f.write(f"\t{child_block}\n")
+                    if os.getenv("TRANSFER_MODE") == "MOVE":
+                        delete_line_containing_string(file_path+'/journals/'+journal+'.md', child_block)
+                f.write("\n")
+    return
+
+def delete_line_containing_string(file_path, target_string):
+    try:
+        # Read all lines from the file
+        with open(file_path, "r") as file:
+            lines = file.readlines()
+        
+        # Filter out lines containing the target string
+        updated_lines = [line for line in lines if target_string not in line]
+        
+        # Write the updated lines back to the file
+        with open(file_path, "w") as file:
+            file.writelines(updated_lines)
+        
+        print(f"Lines containing '{target_string}' have been removed from {file_path}.")
+    except FileNotFoundError:
+        print(f"Error: The file '{file_path}' does not exist.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 if __name__ == "__main__":
     workspace_path = os.getenv("WORKSPACE_PATH")
@@ -100,7 +131,8 @@ if __name__ == "__main__":
             parse_journal(file_name, content, references)
         find_missing_files_by_names(references, workspace_path + '/pages')
         # print(references)
-        write_output(references, workspace_path + '/pages')
+        write_output(references, workspace_path)
         print("Output has been written to logseq_tweaker_output.md")
+
     except Exception as e:
         print(f"Error: {e}")
