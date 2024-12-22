@@ -1,5 +1,6 @@
 import re
 import os
+import json
 
 from dotenv import load_dotenv
 from folder_reader import read_files_in_folder
@@ -45,9 +46,6 @@ def parse_journal(file_name, file_content, references):
                 if topic not in references:
                     references[topic] = {"journals":{}}
                 topic_references = references[topic]
-                if base_name not in topic_references["journals"]:
-                    topic_references["journals"][base_name] = []
-                
                 child_blocks = []
                 if not CHILD_BLOCK_STRICT_MODE:
                         child_blocks.append(line.strip())
@@ -63,8 +61,30 @@ def parse_journal(file_name, file_content, references):
                         shouldloop = False
                     j += 1
                 if child_blocks:
+                    if base_name not in topic_references["journals"]:
+                        topic_references["journals"][base_name] = []
                     topic_references["journals"][base_name] += child_blocks
     return references
+
+def write_to_file(file_path, references, reference, mode="w"):
+    pages_path = file_path + '/pages'
+    file_path = pages_path+'/'+reference+'.md'
+    file_contents = ""
+    if mode == 'a':
+        with open(file_path, 'r', encoding='utf-8') as f:
+            file_contents = f.read()
+    with open(file_path, mode) as f:
+        if mode == "a":
+            f.write(f"\n\n")
+        for journal, child_blocks in references[reference]["journals"].items():
+            f.write(f"- [[{journal}]]\n")
+            for child_block in child_blocks:
+                if file_contents.find(child_block) == -1:
+                    f.write(f"\t{child_block}\n")
+                    if os.getenv("TRANSFER_MODE") == "MOVE":
+                        delete_line_containing_string(file_path+'/journals/'+journal+'.md', child_block)
+            f.write("\n")
+    return
 
 def write_output(references, file_path):
     pages_path = file_path + '/pages'
@@ -80,19 +100,13 @@ def write_output(references, file_path):
         f.write(f"## Missing References (These have been created as files and the contents added)\n")
         for missing_reference in missing_references:
             f.write(f"\t- [[{missing_reference}]]\n")
-        
         f.write(f"## Child References in journals pointing to existing files\n")
         for existing_reference in existing_references:
             f.write(f"\t- [[{existing_reference}]]\n")
     for missing_reference in missing_references:
-        with open(pages_path+'/'+missing_reference+'.md', 'w') as f:
-            for journal, child_blocks in references[missing_reference]["journals"].items():
-                f.write(f"- [[{journal}]]\n")
-                for child_block in child_blocks:
-                    f.write(f"\t{child_block}\n")
-                    if os.getenv("TRANSFER_MODE") == "MOVE":
-                        delete_line_containing_string(file_path+'/journals/'+journal+'.md', child_block)
-                f.write("\n")
+        write_to_file(file_path, references, missing_reference, 'w')
+    for existing_reference in existing_references:
+        write_to_file(file_path, references, existing_reference, 'a')
     return
 
 def delete_line_containing_string(file_path, target_string):
@@ -130,7 +144,7 @@ if __name__ == "__main__":
             # parse the journal and find all the references
             parse_journal(file_name, content, references)
         find_missing_files_by_names(references, workspace_path + '/pages')
-        # print(references)
+        #print(json.dumps(references, indent=4))
         write_output(references, workspace_path)
         print("Output has been written to logseq_tweaker_output.md")
 

@@ -43,10 +43,9 @@ _Add any you'd like to see as issues_
 - [x] List all references which don't exist as files 
 - [x] List all references which have sub-blocks directly in a journal
 - [x] Create files for missing references & copy/move the blocks to the file
-- [ ] Handle files which already exist
-- [ ] Bug: Indentation is not retained in `CHILD_BLOCK_STRICT_MODE=Y` mode
+- [x] Handle files which already exist
+- [ ] Bug: Indentations are not retained in `CHILD_BLOCK_STRICT_MODE=Y` mode
 - [ ] Handle sub-folders and namespaces
-
 
 ## Unit tests
 * Install pytest: `pip install pytest-html`
