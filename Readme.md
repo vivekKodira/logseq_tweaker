@@ -53,8 +53,11 @@ _Add any you'd like to see as issues_
 - [x] List all references which have sub-blocks directly in a journal
 - [x] Create files for missing references & copy/move the blocks to the file
 - [x] Handle files which already exist
+- [x] Handle sub-folders
 - [ ] Bug: Indentations are not retained in `CHILD_BLOCK_STRICT_MODE=Y` mode
-- [ ] Handle sub-folders and namespaces
+- [ ] Add support to exclude certain tags (ex: `#A` used for prioritisation of tasks)
+- [ ] Bug: Add more resiliancy. A File handling error will cause the entire program to terminate
+- [ ] Handle namespaces
 
 ## Unit tests
 * Install pytest: `pip install pytest-html`

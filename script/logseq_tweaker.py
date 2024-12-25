@@ -3,11 +3,25 @@ import os
 import json
 
 from dotenv import load_dotenv
+from logbook import Logger, FileHandler, WARNING, ERROR, INFO, DEBUG
+
 from folder_reader import read_files_in_folder
+
+log_handler = FileHandler('application.log')
+log_handler.push_application()
+log = Logger('Logseq Tweaker')
+
+level_in_env = {
+    "DEBUG": DEBUG,
+    "WARNING": WARNING,
+    "ERROR": ERROR,
+    "INFO": INFO,
+}
 
 # Load environment variables from a .env file
 load_dotenv()
 
+log.level = level_in_env.get(os.getenv("LOG_LEVEL"), INFO)
 CHILD_BLOCK_STRICT_MODE = None
 
 def extract_reference_words(text):
@@ -28,13 +42,13 @@ def extract_reference_words(text):
 def get_unique_items(input_array):
     return list(set(input_array))
 
-def find_missing_files_by_names(references, folder):
+def find_missing_files_by_names(references, all_files):
     # Loop through each filename in the provided list
     references_list = list(references.keys())
     for reference in references_list:
         # Generate the full path to the file
-        file_path = os.path.join(folder, reference + '.md')
-        references[reference]["exists"] = "Y" if os.path.isfile(file_path) else "N"
+        file_name = reference + ".md"
+        references[reference]["exists"] = "Y" if file_name in all_files else "N"
 
 def parse_journal(file_name, file_content, references):
     lines = file_content.split('\n');
@@ -66,28 +80,39 @@ def parse_journal(file_name, file_content, references):
                     topic_references["journals"][base_name] += child_blocks
     return references
 
-def write_to_file(file_path, references, reference, mode="w"):
-    pages_path = file_path + '/pages'
+def write_to_new_file(workspace_path, references, reference):
+    pages_path = workspace_path + '/pages'
     file_path = pages_path+'/'+reference+'.md'
     file_contents = ""
-    if mode == 'a':
-        with open(file_path, 'r', encoding='utf-8') as f:
-            file_contents = f.read()
-    with open(file_path, mode) as f:
-        if mode == "a":
-            f.write(f"\n\n")
+    with open(file_path, 'w') as f:
         for journal, child_blocks in references[reference]["journals"].items():
             f.write(f"- [[{journal}]]\n")
             for child_block in child_blocks:
                 if file_contents.find(child_block) == -1:
                     f.write(f"\t{child_block}\n")
                     if os.getenv("TRANSFER_MODE") == "MOVE":
-                        delete_line_containing_string(file_path+'/journals/'+journal+'.md', child_block)
+                        delete_line_containing_string(workspace_path+'/journals/'+journal+'.md', child_block)
             f.write("\n")
     return
 
-def write_output(references, file_path):
-    pages_path = file_path + '/pages'
+def write_to_existing_file(workspace_path, file_path, references, reference):
+    file_contents = ""
+    with open(file_path, 'r', encoding='utf-8') as f:
+        file_contents = f.read()
+    with open(file_path, "a") as f:
+        f.write(f"\n\n")
+        for journal, child_blocks in references[reference]["journals"].items():
+            f.write(f"- [[{journal}]]\n")
+            for child_block in child_blocks:
+                if file_contents.find(child_block) == -1:
+                    f.write(f"\t{child_block}\n")
+                    if os.getenv("TRANSFER_MODE") == "MOVE":
+                        delete_line_containing_string(workspace_path+'/journals/'+journal+'.md', child_block)
+            f.write("\n")
+    return
+
+def write_output(references, workspace_path, all_files):
+    pages_path = workspace_path + '/pages'
     missing_references = []
     existing_references = []
     reference_keys = list(references.keys())
@@ -104,10 +129,18 @@ def write_output(references, file_path):
         for existing_reference in existing_references:
             f.write(f"\t- [[{existing_reference}]]\n")
     for missing_reference in missing_references:
-        write_to_file(file_path, references, missing_reference, 'w')
+        write_to_new_file(workspace_path, references, missing_reference)
     for existing_reference in existing_references:
-        write_to_file(file_path, references, existing_reference, 'a')
+        write_to_existing_file(workspace_path, all_files[existing_reference+'.md'] ,references, existing_reference)
     return
+
+def build_files_dictionary(workspace_path):
+    all_files = {}
+    for root, dirs, files in os.walk(workspace_path+'/pages'):
+        for file in files:
+            if file.endswith(".md"):
+                all_files[file] = os.path.join(root, file)
+    return all_files
 
 def delete_line_containing_string(file_path, target_string):
     try:
@@ -122,31 +155,39 @@ def delete_line_containing_string(file_path, target_string):
         with open(file_path, "w") as file:
             file.writelines(updated_lines)
         
-        print(f"Lines containing '{target_string}' have been removed from {file_path}.")
+        log.info(f"Lines containing '{target_string}' have been removed from {file_path}.")
     except FileNotFoundError:
-        print(f"Error: The file '{file_path}' does not exist.")
+        log.error(f"Error: The file '{file_path}' does not exist.")
     except Exception as e:
-        print(f"An error occurred: {e}")
+        log.error(f"An error occurred: {e}")
 
-if __name__ == "__main__":
+def main():
     workspace_path = os.getenv("WORKSPACE_PATH")
     if not workspace_path:
         workspace_path = input("Enter the path to the Logseq folder: ")
+    log.debug(f"Workspace path: {workspace_path}")
     isStrictMode = os.getenv("CHILD_BLOCK_STRICT_MODE")
     if not isStrictMode:
         isStrictMode = input("Enable strict mode for child blocks? (Y/N): ")
     CHILD_BLOCK_STRICT_MODE = isStrictMode == "Y"
+    log.debug(f"CHILD_BLOCK_STRICT_MODE: {CHILD_BLOCK_STRICT_MODE}")
 
     references = {}
     try:
+        all_files = build_files_dictionary(workspace_path)
+        log.debug(f"{json.dumps(all_files, indent=4)}\n")
         files = read_files_in_folder(workspace_path + '/journals')
         for file_name, content in files.items():
             # parse the journal and find all the references
             parse_journal(file_name, content, references)
-        find_missing_files_by_names(references, workspace_path + '/pages')
-        #print(json.dumps(references, indent=4))
-        write_output(references, workspace_path)
-        print("Output has been written to logseq_tweaker_output.md")
+        find_missing_files_by_names(references, all_files)
+        write_output(references, workspace_path, all_files)
+        print("Log has been written to application.log")
 
     except Exception as e:
-        print(f"Error: {e}")
+        log.error(f"Error: {e}")
+
+
+if __name__ == "__main__":
+    with log_handler.applicationbound():
+        main()
