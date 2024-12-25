@@ -22,7 +22,29 @@ level_in_env = {
 load_dotenv()
 
 log.level = level_in_env.get(os.getenv("LOG_LEVEL"), INFO)
+log.info("Log level set to: " + os.getenv("LOG_LEVEL"))
 CHILD_BLOCK_STRICT_MODE = None
+
+ignore_list_env = os.environ.get("IGNORE_LIST", "")  # Default to empty string if not set
+ignore_list = ignore_list_env.split(",") if ignore_list_env else []
+IGNORE_DICT = {item: True for item in ignore_list}  # Create a dictionary for faster lookups
+log.debug(f"Ignore dict: {IGNORE_DICT}")
+
+ignore_regex = os.environ.get("IGNORE_REGEX", "")
+
+strip_chars = os.getenv("STRIP_CHARS","")
+
+isDryRun = os.getenv("DRY_RUN") == 'Y'
+log.debug(f"isDryRun: {isDryRun}")
+
+minRefLength = os.getenv("MIN_REF_LENGTH")
+if not minRefLength:
+    minRefLength = 0
+else:
+    minRefLength = int(minRefLength)
+log.debug(f"minRefLength: {minRefLength}")
+
+
 
 def extract_reference_words(text):
     """
@@ -37,7 +59,7 @@ def extract_reference_words(text):
     
     # Combine matches from both groups and filter out empty strings
     results = [match[0] or match[1] for match in matches]
-    return results
+    return list(map(lambda x: re.sub(strip_chars,'',x),results))
 
 def get_unique_items(input_array):
     return list(set(input_array))
@@ -50,6 +72,22 @@ def find_missing_files_by_names(references, all_files):
         file_name = reference + ".md"
         references[reference]["exists"] = "Y" if file_name in all_files else "N"
 
+
+def shouldBeIgnored(topic):
+    try:
+        if topic in IGNORE_DICT:
+            log.debug(f"Ignoring: {topic}")
+            return True
+        if ignore_regex and re.match(ignore_regex, topic):
+            log.debug(f"Ignoring: {topic} as it matches the ignore regex")
+            return True
+        if len(topic) < minRefLength:
+            log.debug(f"Ignoring: {topic} as it is less than {minRefLength} characters")
+            return True
+    except Exception as e:
+        log.warning(f"Error while checking if {topic} should be ignored: {e}")
+    return False
+
 def parse_journal(file_name, file_content, references):
     lines = file_content.split('\n');
     base_name, extension = os.path.splitext(file_name)
@@ -57,6 +95,8 @@ def parse_journal(file_name, file_content, references):
         topics = extract_reference_words(line)
         if topics:
             for topic in topics:
+                if shouldBeIgnored(topic):
+                    continue
                 if topic not in references:
                     references[topic] = {"journals":{}}
                 topic_references = references[topic]
@@ -84,31 +124,48 @@ def write_to_new_file(workspace_path, references, reference):
     pages_path = workspace_path + '/pages'
     file_path = pages_path+'/'+reference+'.md'
     file_contents = ""
-    with open(file_path, 'w') as f:
-        for journal, child_blocks in references[reference]["journals"].items():
-            f.write(f"- [[{journal}]]\n")
-            for child_block in child_blocks:
-                if file_contents.find(child_block) == -1:
-                    f.write(f"\t{child_block}\n")
-                    if os.getenv("TRANSFER_MODE") == "MOVE":
-                        delete_line_containing_string(workspace_path+'/journals/'+journal+'.md', child_block)
-            f.write("\n")
+    log.debug(f"Creating file: {file_path}")
+    try:
+        # Extract the directory path from the file path
+        dir_path = os.path.dirname(file_path)
+        # Create directories if they do not exist
+        if dir_path:
+            os.makedirs(dir_path, exist_ok=True)
+        with open(file_path, 'w') as f:
+            for journal, child_blocks in references[reference]["journals"].items():
+                f.write(f"- [[{journal}]]\n")
+                for child_block in child_blocks:
+                    if file_contents.find(child_block) == -1:
+                        f.write(f"\t{child_block}\n")
+                        if os.getenv("TRANSFER_MODE") == "MOVE":
+                            delete_line_containing_string(workspace_path+'/journals/'+journal+'.md', child_block)
+                f.write("\n")
+    except FileNotFoundError:
+        log.error(f"Error: The file '{file_path}' does not exist.")
+    except Exception as e:
+        log.error(f"An error occurred: {e}")
     return
 
 def write_to_existing_file(workspace_path, file_path, references, reference):
     file_contents = ""
-    with open(file_path, 'r', encoding='utf-8') as f:
-        file_contents = f.read()
-    with open(file_path, "a") as f:
-        f.write(f"\n\n")
-        for journal, child_blocks in references[reference]["journals"].items():
-            f.write(f"- [[{journal}]]\n")
-            for child_block in child_blocks:
-                if file_contents.find(child_block) == -1:
-                    f.write(f"\t{child_block}\n")
-                    if os.getenv("TRANSFER_MODE") == "MOVE":
-                        delete_line_containing_string(workspace_path+'/journals/'+journal+'.md', child_block)
-            f.write("\n")
+    log.debug(f"Attempting to read file: {file_path}")
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            file_contents = f.read()
+        with open(file_path, "a") as f:
+            f.write(f"\n\n")
+            for journal, child_blocks in references[reference]["journals"].items():
+                f.write(f"- [[{journal}]]\n")
+                for child_block in child_blocks:
+                    if file_contents.find(child_block) == -1:
+                        f.write(f"\t{child_block}\n")
+                        if os.getenv("TRANSFER_MODE") == "MOVE":
+                            delete_line_containing_string(workspace_path+'/journals/'+journal+'.md', child_block)
+                f.write("\n")
+    except FileNotFoundError:
+        log.error(f"Error: The file '{file_path}' does not exist.")
+    except Exception as e:
+        log.error(f"An error occurred: {e}")           
     return
 
 def write_output(references, workspace_path, all_files):
@@ -128,10 +185,12 @@ def write_output(references, workspace_path, all_files):
         f.write(f"## Child References in journals pointing to existing files\n")
         for existing_reference in existing_references:
             f.write(f"\t- [[{existing_reference}]]\n")
-    for missing_reference in missing_references:
-        write_to_new_file(workspace_path, references, missing_reference)
-    for existing_reference in existing_references:
-        write_to_existing_file(workspace_path, all_files[existing_reference+'.md'] ,references, existing_reference)
+    if not isDryRun:
+        print("Writing to files...")
+        for missing_reference in missing_references:
+            write_to_new_file(workspace_path, references, missing_reference)
+        for existing_reference in existing_references:
+            write_to_existing_file(workspace_path, all_files[existing_reference+'.md'] ,references, existing_reference)
     return
 
 def build_files_dictionary(workspace_path):

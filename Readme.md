@@ -13,7 +13,11 @@ A program that parses journal entries, helps find tags & child blocks in journal
 ![](./assets/demo.gif)
 
 ## Execution
-* Recommended: Take a backup of your workspace
+### Recommendations
+  * Take a backup of your workspace ideally with git. That way you can reset the workspace back to its original state afterwards
+  * Run once in dry run mode `DRY_RUN=Y` in the .env file
+
+### Steps
 * Clone this repo locally
 * Navigate into the 'script' folder
 * Install Poetry (if not already installed):
@@ -24,11 +28,13 @@ curl -sSL https://install.python-poetry.org | python3 -
 ```
 poetry install
 ```
+* Navigate to the script folder
 * Rename the file `example.env` to `.env` and tweak it appropriately (ex: specify the path to your workspace)
 * Run the program
 ```
-python ./script/logseq_tweaker.py
+poetry run python ./logseq_tweaker.py
 ```
+* Logs are recorded to the file: `application.log`
 
 ## Before & After
 * The example below shows sample markdown in a journal
@@ -54,9 +60,13 @@ _Add any you'd like to see as issues_
 - [x] Create files for missing references & copy/move the blocks to the file
 - [x] Handle files which already exist
 - [x] Handle sub-folders
+- [x] Add support to exclude certain tags (ex: `#A` used for prioritisation of tasks)
+- [x] Add support to ignore certain reference patterns
+- [x] Add support to ignore references below a certain length
+- [x] Add support to strip characters from references (to handle corrupted mentions like [[[[sample]]]])
+- [x] Bug: Add more resiliancy. A File handling error will cause the entire program to terminate
+- [x] Dry run mode
 - [ ] Bug: Indentations are not retained in `CHILD_BLOCK_STRICT_MODE=Y` mode
-- [ ] Add support to exclude certain tags (ex: `#A` used for prioritisation of tasks)
-- [ ] Bug: Add more resiliancy. A File handling error will cause the entire program to terminate
 - [ ] Handle namespaces
 
 ## Unit tests
