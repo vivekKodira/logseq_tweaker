@@ -15,14 +15,23 @@ A program that parses journal entries, helps find tags & child blocks in journal
 ## Execution
 * Recommended: Take a backup of your workspace
 * Clone this repo locally
-* Install dependencies
-  * `pip install python-dotenv`
-* Tweak the .env file appropriately (ex: specify the path to your workspace)
-* Run `python ./script/logseq_tweaker.py`
-  * The script will go through all the journals & get a list of unique `[[pages]]` or `#tags`
-  * Then it searches the pages folder for any references which don't exist as files
-* The log is written to the file `logseq_tweaker_output.md` in your workspace
-* The example below shows the markdown in the journal
+* Navigate into the 'script' folder
+* Install Poetry (if not already installed):
+```
+curl -sSL https://install.python-poetry.org | python3 -
+```
+* Install dependencies:
+```
+poetry install
+```
+* Rename the file `example.env` to `.env` and tweak it appropriately (ex: specify the path to your workspace)
+* Run the program
+```
+python ./script/logseq_tweaker.py
+```
+
+## Before & After
+* The example below shows sample markdown in a journal
 ```
 - A note about [[Virtual Topic]]
 	- 1st Content added to the virtual topic which should be moved to the topic itself

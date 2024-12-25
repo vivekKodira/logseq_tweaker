@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "logseq-tweaker"
+version = "0.1.0"
+description = "A script which adds journal entries to files of their own"
+authors = ["vivek kodira <vivekkodira@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.9"
+python-dotenv = "^1.0.1"
+logbook = "^1.8.0"
+
+
+[tool.poetry.group.test.dependencies]
+pytest-html = "^4.1.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
