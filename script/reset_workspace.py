@@ -9,13 +9,13 @@ load_dotenv()
 
 if __name__ == "__main__":
     workspace_path = '/Users/vivekkodira/work/logseq_tweaker/sample_workspace'
-    if str(Path.cwd()) != '/Users/vivekkodira/work/logseq_tweaker':
+    if str(Path.cwd()) != '/Users/vivekkodira/work/logseq_tweaker/script':
         print("Stop! This script is not meant to be run on actual workspaces")
         exit()
     directories = ["journals", "pages"]
     for directory in directories:
         try:
-            source = str(Path.cwd()) + "/script/workspace_initial/"+directory
+            source = str(Path.cwd()) + "/workspace_initial/"+directory
             target = workspace_path+"/"+directory
             if os.path.exists(target):  # Check if it's a folder
                 shutil.rmtree(target)
