@@ -66,7 +66,7 @@ _Add any you'd like to see as issues_
 - [x] Add support to strip characters from references (to handle corrupted mentions like [[[[sample]]]])
 - [x] Bug: Add more resiliancy. A File handling error will cause the entire program to terminate
 - [x] Dry run mode
-- [ ] Bug: Indentations are not retained in `CHILD_BLOCK_STRICT_MODE=Y` mode
+- [x] Bug: Indentations are not retained in `CHILD_BLOCK_STRICT_MODE=Y` mode
 - [ ] Handle namespaces
 
 ## Unit tests

@@ -110,7 +110,7 @@ def parse_journal(file_name, file_content, references):
                     next_line = lines[j]
                     # IF the line is indented and not empty, add it to the child block
                     if (next_line.startswith('   ') or next_line.startswith('\t')) and next_line.strip():
-                        child_blocks.append(next_line.strip())
+                        child_blocks.append(next_line)
                     else:
                         shouldloop = False
                     j += 1
